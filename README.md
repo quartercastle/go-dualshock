@@ -18,6 +18,8 @@ go get github.com/kvartborg/go-dualshock
 package main
 
 import (
+    "fmt"
+    "log"
     "github.com/karalabe/hid"
     dualshock "github.com/kvartborg/go-dualshock"
 )
@@ -39,7 +41,7 @@ func main() {
     controller := dualshock.New(device)
 
     controller.Listen(func(state dualshock.State) {
-        fmt.Print(state.Analog.L2)
+        fmt.Println(state.Analog.L2)
     })
 }
 ```
