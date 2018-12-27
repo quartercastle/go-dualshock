@@ -135,13 +135,12 @@ func New(reader io.Reader) *Controller {
 // read transforms data from the io.Reader and pushes it to the queue of
 // states
 func (c *Controller) read() {
-	b := make([]byte, 64)
-
 	for {
 		select {
 		case <-c.interrupt:
 			return
 		default:
+			b := make([]byte, 64)
 			c.reader.Read(b)
 			c.queue <- transform(b)
 			time.Sleep((1000 / 254) * time.Millisecond)
