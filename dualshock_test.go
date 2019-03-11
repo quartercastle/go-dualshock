@@ -15,13 +15,15 @@ func (f fakeDevice) Read(b []byte) (int, error) {
 		129, 115, 70, 27, 130, 62, 97, 32, 0, 128, 0, 0, 0, 128, 0, 0, 0, 0,
 		128, 0, 0, 0, 128, 0, 0, 0, 0, 128, 0,
 	})
-	return 0, nil
+	return 64, nil
 }
 
 func TestDualshock(t *testing.T) {
 	controller := dualshock.New(fakeDevice{})
 
 	result := make(chan dualshock.State, 1)
+	defer close(result)
+
 	controller.Listen(func(state dualshock.State) {
 		controller.Close()
 		result <- state
@@ -29,5 +31,19 @@ func TestDualshock(t *testing.T) {
 
 	if r := <-result; !r.L2 {
 		t.Errorf("Invalid state L2 should be true; got %v", r.L2)
+	}
+}
+
+func BenchmarkDualshock(b *testing.B) {
+	controller := dualshock.New(fakeDevice{})
+
+	result := make(chan dualshock.State, 1)
+
+	controller.Listen(func(state dualshock.State) {
+		result <- state
+	})
+
+	for n := 0; n < b.N; n++ {
+		<-result
 	}
 }

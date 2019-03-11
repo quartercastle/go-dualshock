@@ -3,13 +3,13 @@ package dualshock
 import (
 	"encoding/binary"
 	"io"
-	"time"
 )
 
 // Controller describes the reference to the hardware device
 type Controller struct {
 	reader    io.Reader
-	queue     chan State
+	queue     chan []byte
+	errors    chan error
 	interrupt chan int
 }
 
@@ -88,13 +88,13 @@ func transform(b []byte) State {
 		TrackPad0: TrackPad{
 			ID:     int(b[35] & 0x7f),
 			Active: (b[35] >> 7) == 0,
-			X:      int(((b[37] & 0x0f) << 8) | b[36]),
+			X:      int(((b[37] & 0x0f) << 4) | b[36]),
 			Y:      int(b[38]<<4 | ((b[37] & 0xf0) >> 4)),
 		},
 		TrackPad1: TrackPad{
 			ID:     int(b[39] & 0x7f),
 			Active: (b[39] >> 7) == 0,
-			X:      int(((b[41] & 0x0f) << 8) | b[40]),
+			X:      int(((b[41] & 0x0f) << 4) | b[40]),
 			Y:      int(b[42]<<4 | ((b[41] & 0xf0) >> 4)),
 		},
 		LeftDPad: DPad{
@@ -127,7 +127,12 @@ func transform(b []byte) State {
 // New returns a new controller which transforms input from the device to a valid
 // controller state
 func New(reader io.Reader) *Controller {
-	c := &Controller{reader, make(chan State), make(chan int, 2)}
+	c := &Controller{
+		reader,
+		make(chan []byte),
+		make(chan error),
+		make(chan int),
+	}
 	go c.read()
 	return c
 }
@@ -135,35 +140,47 @@ func New(reader io.Reader) *Controller {
 // read transforms data from the io.Reader and pushes it to the queue of
 // states
 func (c *Controller) read() {
+	var b []byte
 	for {
 		select {
 		case <-c.interrupt:
+			close(c.errors)
+			close(c.queue)
 			return
 		default:
-			b := make([]byte, 64)
-			c.reader.Read(b)
-			c.queue <- transform(b)
-			time.Sleep((1000 / 254) * time.Millisecond)
+			b = make([]byte, 64)
+			n, err := c.reader.Read(b)
+
+			if err != nil {
+				c.errors <- err
+				continue
+			}
+
+			c.queue <- b[:n]
 		}
 	}
 }
 
 // Listen for controller state changes
-func (c *Controller) Listen(handler func(State)) {
-	for {
-		select {
-		case <-c.interrupt:
-			return
-		default:
-			handler(<-c.queue)
+func (c *Controller) Listen(handle func(State)) {
+	go func() {
+		for {
+			select {
+			case <-c.interrupt:
+				return
+			default:
+				handle(transform(<-c.queue))
+			}
 		}
-	}
+	}()
+}
+
+// Errors returns a channel of reader errors
+func (c *Controller) Errors() <-chan error {
+	return c.errors
 }
 
 // Close the listener
 func (c *Controller) Close() {
-	c.interrupt <- 1 // close reader
-	c.interrupt <- 1 // close listener
 	close(c.interrupt)
-	close(c.queue)
 }
