@@ -163,16 +163,14 @@ func (c *Controller) read() {
 
 // Listen for controller state changes
 func (c *Controller) Listen(handle func(State)) {
-	go func() {
-		for {
-			select {
-			case <-c.interrupt:
-				return
-			default:
-				handle(transform(<-c.queue))
-			}
+	for {
+		select {
+		case <-c.interrupt:
+			return
+		default:
+			handle(transform(<-c.queue))
 		}
-	}()
+	}
 }
 
 // Errors returns a channel of reader errors
