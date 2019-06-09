@@ -1,9 +1,7 @@
-package dualshock_test
+package dualshock
 
 import (
 	"testing"
-
-	dualshock "github.com/kvartborg/go-dualshock"
 )
 
 type fakeDevice struct{}
@@ -19,12 +17,12 @@ func (f fakeDevice) Read(b []byte) (int, error) {
 }
 
 func TestDualshock(t *testing.T) {
-	controller := dualshock.New(fakeDevice{})
+	controller := New(fakeDevice{})
 
-	result := make(chan dualshock.State, 1)
+	result := make(chan State, 1)
 	defer close(result)
 
-	controller.Listen(func(state dualshock.State) {
+	controller.Listen(func(state State) {
 		controller.Close()
 		result <- state
 	})
@@ -35,11 +33,11 @@ func TestDualshock(t *testing.T) {
 }
 
 func BenchmarkDualshock(b *testing.B) {
-	controller := dualshock.New(fakeDevice{})
+	controller := New(fakeDevice{})
 
-	result := make(chan dualshock.State, 1)
+	result := make(chan State, 1)
 
-	controller.Listen(func(state dualshock.State) {
+	go controller.Listen(func(state State) {
 		result <- state
 	})
 
