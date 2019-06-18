@@ -18,12 +18,9 @@ func (f fakeDevice) Read(b []byte) (int, error) {
 
 func TestDualshock(t *testing.T) {
 	controller := New(fakeDevice{})
-
 	result := make(chan State, 1)
-	defer close(result)
 
-	controller.Listen(func(state State) {
-		controller.Close()
+	go controller.Listen(func(state State) {
 		result <- state
 	})
 

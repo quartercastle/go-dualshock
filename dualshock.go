@@ -45,7 +45,7 @@ type State struct {
 	Share, Options, PSHome          bool
 	Timestamp, BatteryLevel         int
 	LeftDPad                        DPad
-	RigthDPad                       DPad
+	RightDPad                       DPad
 	Motion                          Motion
 	Orientation                     Orientation
 
@@ -101,7 +101,7 @@ func transform(b []byte) State {
 			X: int(b[1]),
 			Y: int(b[2]),
 		},
-		RigthDPad: DPad{
+		RightDPad: DPad{
 			X: int(b[3]),
 			Y: int(b[4]),
 		},
@@ -140,7 +140,6 @@ func New(reader io.Reader) *Controller {
 // read transforms data from the io.Reader and pushes it to the queue of
 // states
 func (c *Controller) read() {
-	var b []byte
 	for {
 		select {
 		case <-c.interrupt:
@@ -148,7 +147,7 @@ func (c *Controller) read() {
 			close(c.queue)
 			return
 		default:
-			b = make([]byte, 64)
+			b := make([]byte, 64)
 			n, err := c.reader.Read(b)
 
 			if err != nil {
